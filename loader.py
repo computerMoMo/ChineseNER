@@ -15,7 +15,7 @@ def load_sentences(path, lower, zeros):
     sentence = []
     num = 0
     for line in codecs.open(path, 'r', 'utf8'):
-        num+=1
+        num += 1
         line = zero_digits(line.rstrip()) if zeros else line.rstrip()
         # print(list(line))
         if not line:
@@ -24,6 +24,7 @@ def load_sentences(path, lower, zeros):
                     sentences.append(sentence)
                 sentence = []
         else:
+            # 将句子中的空格替换成"$"
             if line[0] == " ":
                 line = "$" + line[1:]
                 word = line.split()
@@ -110,6 +111,10 @@ def prepare_dataset(sentences, char_to_id, tag_to_id, lower=False, train=True):
             tags = [tag_to_id[w[-1]] for w in s]
         else:
             tags = [none_index for _ in chars]
+        # string:原始的句子的list
+        # chars:句子中的char对应的id
+        # segs:将句子进行分词后，每个char的标记
+        # tags:NER tag的标签的id
         data.append([string, chars, segs, tags])
 
     return data
@@ -140,7 +145,7 @@ def augment_with_pretrained(dictionary, ext_emb_path, chars):
             if char not in dictionary:
                 dictionary[char] = 0
     else:
-        for char in chars:
+        for char in chars:#这是要干嘛???
             if any(x in pretrained for x in [
                 char,
                 char.lower(),
