@@ -302,7 +302,7 @@ class BatchManager(object):
         max_length = max([len(sentence[0]) for sentence in data])
         for line in data:
             string, char, seg, target = line
-            padding = [0] * (max_length - len(string))
+            padding = [0] * (max_length - len(string))#补零???
             strings.append(string + padding)
             chars.append(char + padding)
             segs.append(seg + padding)
