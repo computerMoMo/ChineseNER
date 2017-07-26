@@ -45,7 +45,7 @@ class Model(object):
                                       name="Dropout")
 
         used = tf.sign(tf.abs(self.char_inputs))
-        length = tf.reduce_sum(used, reduction_indices=1)
+        length = tf.reduce_sum(used, reduction_indices=1)#char_inputs 的每一行的有效的字符长度,去除了用0填充的字符(一句话真正的长度)
         self.lengths = tf.cast(length, tf.int32)
         self.batch_size = tf.shape(self.char_inputs)[0]
         self.num_steps = tf.shape(self.char_inputs)[-1]
@@ -97,17 +97,17 @@ class Model(object):
         with tf.variable_scope("char_embedding" if not name else name), tf.device('/cpu:0'):
             self.char_lookup = tf.get_variable(
                     name="char_embedding",
-                    shape=[self.num_chars, self.char_dim],
+                    shape=[self.num_chars, self.char_dim],#shape:语料中char的个数*字向量的维数
                     initializer=self.initializer)
             embedding.append(tf.nn.embedding_lookup(self.char_lookup, char_inputs))
             if config["seg_dim"]:
                 with tf.variable_scope("seg_embedding"), tf.device('/cpu:0'):
                     self.seg_lookup = tf.get_variable(
                         name="seg_embedding",
-                        shape=[self.num_segs, self.seg_dim],
+                        shape=[self.num_segs, self.seg_dim],#4 * segdim(100)
                         initializer=self.initializer)
                     embedding.append(tf.nn.embedding_lookup(self.seg_lookup, seg_inputs))
-            embed = tf.concat(embedding, axis=-1)
+            embed = tf.concat(embedding, axis=-1)#axis= -1???
         return embed
 
     def biLSTM_layer(self, lstm_inputs, lstm_dim, lengths, name=None):
@@ -139,7 +139,7 @@ class Model(object):
         :return: [batch_size, num_steps, num_tags]
         """
         with tf.variable_scope("project"  if not name else name):
-            with tf.variable_scope("hidden"):
+            with tf.variable_scope("hidden"):#在LSTM层之后加了一个tanh激活层
                 W = tf.get_variable("W", shape=[self.lstm_dim*2, self.lstm_dim],
                                     dtype=tf.float32, initializer=self.initializer)
 
