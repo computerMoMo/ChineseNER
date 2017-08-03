@@ -68,7 +68,7 @@ def char_mapping(sentences, lower):
     Create a dictionary and a mapping of words, sorted by frequency.
     """
     chars = [[x[0].lower() if lower else x[0] for x in s] for s in sentences]
-    dico = create_dico(chars)
+    dico = create_dico(chars)#char和词频
     dico["<PAD>"] = 10000001
     dico['<UNK>'] = 10000000
     char_to_id, id_to_char = create_mapping(dico)
@@ -103,10 +103,10 @@ def prepare_dataset(sentences, char_to_id, tag_to_id, lower=False, train=True):
         return x.lower() if lower else x
     data = []
     for s in sentences:
-        string = [w[0] for w in s]
+        string = [w[0] for w in s]#句子 list
         chars = [char_to_id[f(w) if f(w) in char_to_id else '<UNK>']
-                 for w in string]
-        segs = get_seg_features("".join(string))
+                 for w in string]#句子的idx list
+        segs = get_seg_features("".join(string))#分词特征list
         if train:
             tags = [tag_to_id[w[-1]] for w in s]
         else:

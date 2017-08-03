@@ -172,7 +172,7 @@ def train():
         logger.info("start training")
         loss = []
         for i in range(FLAGS.max_epoch):
-            for batch in train_manager.iter_batch(shuffle=True):
+            for batch in train_manager.iter_batch(shuffle=False):
                 step, batch_loss = model.run_step(sess, True, batch)
                 loss.append(batch_loss)
                 if step % FLAGS.steps_check == 0:

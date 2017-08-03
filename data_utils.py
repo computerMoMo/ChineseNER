@@ -204,6 +204,52 @@ def load_word2vec(emb_path, id_to_word, word_dim, old_weights):
     return new_weights
 
 
+def new_load_word2vec(emb_path, id_to_word, word_dim):
+    new_weights = np.zeros(shape=[len(id_to_word), word_dim], dtype=np.float32)
+    print('Loading pretrained embeddings from {}...'.format(emb_path))
+    pre_trained = {}
+    emb_invalid = 0
+    for i, line in enumerate(codecs.open(emb_path, 'r', 'utf-8')):
+        line = line.rstrip().split()
+        if len(line) == word_dim + 1:
+            pre_trained[line[0]] = np.array(
+                [float(x) for x in line[1:]]
+            ).astype(np.float32)
+        else:
+            emb_invalid += 1
+    if emb_invalid > 0:
+        print('WARNING: %i invalid lines' % emb_invalid)
+    c_found = 0
+    c_lower = 0
+    c_zeros = 0
+    n_words = len(id_to_word)
+    # Lookup table initialization
+    for i in range(n_words):
+        word = id_to_word[i]
+        if word in pre_trained:
+            new_weights[i] = pre_trained[word]
+            c_found += 1
+        elif word.lower() in pre_trained:
+            new_weights[i] = pre_trained[word.lower()]
+            c_lower += 1
+        elif re.sub('\d', '0', word.lower()) in pre_trained:
+            new_weights[i] = pre_trained[
+                re.sub('\d', '0', word.lower())
+            ]
+            c_zeros += 1
+    print('Loaded %i pretrained embeddings.' % len(pre_trained))
+    print('%i / %i (%.4f%%) words have been initialized with '
+          'pretrained embeddings.' % (
+              c_found + c_lower + c_zeros, n_words,
+              100. * (c_found + c_lower + c_zeros) / n_words)
+          )
+    print('%i found directly, %i after lowercasing, '
+          '%i after lowercasing + zero.' % (
+              c_found, c_lower, c_zeros
+          ))
+    return new_weights
+
+
 def full_to_half(s):
     """
     Convert full-width character to half-width one 
@@ -281,13 +327,17 @@ def input_from_line(line, char_to_id):
 
 class BatchManager(object):
 
-    def __init__(self, data,  batch_size):
-        self.batch_data = self.sort_and_pad(data, batch_size)
+    def __init__(self, data,  batch_size, sort=False):
+        self.batch_data = self.sort_and_pad(data, batch_size, sort)
         self.len_data = len(self.batch_data)
 
-    def sort_and_pad(self, data, batch_size):
-        num_batch = int(math.ceil(len(data) /batch_size))
-        sorted_data = sorted(data, key=lambda x: len(x[0]))
+    # 按照string(句子)的长度排序
+    def sort_and_pad(self, data, batch_size, sort):
+        num_batch = int(math.ceil(len(data) /batch_size))#ceil:取上整
+        if sort:
+            sorted_data = sorted(data, key=lambda x: len(x[0]))
+        else:
+            sorted_data = data
         batch_data = list()
         for i in range(num_batch):
             batch_data.append(self.pad_data(sorted_data[i*batch_size : (i+1)*batch_size]))
@@ -302,7 +352,7 @@ class BatchManager(object):
         max_length = max([len(sentence[0]) for sentence in data])
         for line in data:
             string, char, seg, target = line
-            padding = [0] * (max_length - len(string))#补零???
+            padding = [0] * (max_length - len(string))#补零
             strings.append(string + padding)
             chars.append(char + padding)
             segs.append(seg + padding)
@@ -314,3 +364,41 @@ class BatchManager(object):
             random.shuffle(self.batch_data)
         for idx in range(self.len_data):
             yield self.batch_data[idx]
+
+
+def data_iterator(data, batch_size, shuffle=False):
+    data_len = len(data)
+    # data中最后一个batch size的数据是缺失的
+    num_batchs = data_len // batch_size
+    lArray = []
+    xArray = []
+    yArray = []
+    segArray = []
+    sentArray=[]
+
+    for i in range(num_batchs):
+        batch_data = data[i*batch_size : (i+1)*batch_size]#在data中取batch size个data line
+
+        l=[]
+        x=[]
+        y=[]
+        segs=[]
+        sents=[]
+
+        max_length = max([len(sentence[0]) for sentence in batch_data])
+        for line in batch_data:
+            string, char, seg, target = line
+            padding = [0] * (max_length - len(string))  # 补零
+
+            l.append(len(string))
+            sents.append(string+padding)
+            x.append(char+padding)
+            segs.append(seg+padding)
+            y.append(target+padding)
+        lArray.append(l)
+        xArray.append(x)
+        yArray.append(y)
+        segArray.append(segs)
+        sentArray.append(sents)
+
+    return (xArray, yArray, lArray, segArray, sentArray)
